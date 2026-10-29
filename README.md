@@ -58,20 +58,20 @@
 
 ### Method 1 - One Line Command (Runs Immediately)
 
-The URL [asheroto.com/updates](https://asheroto.com/updates) always redirects to the [latest release](https://github.com/asheroto/Install-AllUpdates/releases/latest/download/Install-AllUpdates.ps1) of the script.
+The URL [asheroto.com/windowsupdate](https://asheroto.com/windowsupdate) always redirects to the [latest release](https://github.com/asheroto/Install-AllUpdates/releases/latest/download/Install-AllUpdates.ps1) of the script.
 
 If you just need to run the basic script without any parameters, open PowerShell as Administrator and use the following one-line command:
 
 #### Option A: asheroto.com short URL
 
 ```powershell
-irm asheroto.com/updates | iex
+irm asheroto.com/windowsupdate | iex
 ```
 
 Due to the nature of how PowerShell works, you won't be able to use any parameters like `-NoReboot` with this command line. If you need to use a one-line command with parameters, you can use the following:
 
 ```powershell
-&([ScriptBlock]::Create((irm asheroto.com/updates))) -NoReboot
+&([ScriptBlock]::Create((irm asheroto.com/windowsupdate))) -NoReboot
 ```
 
 #### Option B: direct release URL
@@ -112,7 +112,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 ```
 
 ```powershell
-&([ScriptBlock]::Create((irm asheroto.com/updates))) -ExcludeOptional -NoReboot
+&([ScriptBlock]::Create((irm asheroto.com/windowsupdate))) -ExcludeOptional -NoReboot
 ```
 
 ## Reading the Result
