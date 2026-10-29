@@ -1,8 +1,27 @@
-#Requires -Version 5.1
-#Requires -RunAsAdministrator
-<#
-    INSTALL ALL PENDING WINDOWS UPDATES, OPTIONAL ONES INCLUDED, THEN RESTART
+<#PSScriptInfo
 
+.VERSION 1.0.0
+
+.GUID 4e55d042-87f4-4458-a17a-b1f7122b7542
+
+.AUTHOR asheroto
+
+.COMPANYNAME asheroto
+
+.TAGS PowerShell Windows Update PSWindowsUpdate drivers optional updates install
+
+.PROJECTURI https://github.com/asheroto/Install-AllUpdates
+
+.RELEASENOTES
+[Version 1.0.0] - Initial release.
+
+#>
+
+<#
+.SYNOPSIS
+    Install all pending Windows updates, optional ones included, then restart.
+
+.DESCRIPTION
     Run from an admin PowerShell on the device. It installs the NuGet provider and the
     PSWindowsUpdate module if they are missing, then installs every update Windows Update
     has on offer, including the optional ones (driver updates and optional quality
@@ -25,6 +44,8 @@
 
     Log: C:\ProgramData\InstallAllUpdates\Logs
 #>
+#Requires -Version 5.1
+#Requires -RunAsAdministrator
 
 [CmdletBinding()]
 param(
@@ -32,6 +53,9 @@ param(
     [switch] $IncludeFeatureUpdates,
     [switch] $NoReboot
 )
+
+# Keep in sync with .VERSION above.
+$CurrentVersion = '1.0.0'
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
@@ -54,6 +78,7 @@ $exitCode = 1
 try {
     $excluded = @(if ($ExcludeOptional) { 'optional' }; if (-not $IncludeFeatureUpdates) { 'feature updates' })
     Write-Log "=== Install all pending updates$(if ($excluded) { " ($($excluded -join ', ') excluded)" }) ==="
+    Write-Log "Version: $CurrentVersion"
     Write-Log "Device : $env:COMPUTERNAME"
     Write-Log "Log    : $LogFile"
 
