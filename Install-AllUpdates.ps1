@@ -75,26 +75,39 @@ try {
         Write-Log 'PSWindowsUpdate module already installed.'
     }
     else {
-        # PowerShellGet 1.0.0.1 (stock on 5.1) often has no PSGallery registration, or a
-        # stale one, and then reports "No match was found" instead of a repository error.
-        $gallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-        if (-not $gallery) {
-            Write-Log 'PSGallery repository missing. Registering the default repository.'
-            Register-PSRepository -Default -ErrorAction Stop
-        }
-        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction Stop
-
-        Write-Log 'Installing the PSWindowsUpdate module from the PowerShell Gallery.'
         try {
-            Install-Module -Name PSWindowsUpdate -Repository PSGallery -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
+            # PowerShellGet 1.0.0.1 (stock on 5.1) often has no PSGallery registration, or a
+            # stale one, and then reports "No match was found" instead of a repository error.
+            $gallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+            if (-not $gallery) {
+                Write-Log 'PSGallery repository missing. Registering the default repository.'
+                Register-PSRepository -Default -ErrorAction Stop
+            }
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction Stop
+
+            Write-Log 'Installing the PSWindowsUpdate module from the PowerShell Gallery.'
+            try {
+                Install-Module -Name PSWindowsUpdate -Repository PSGallery -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
+            }
+            catch {
+                # A broken registration survives the check above. Re-register once and retry.
+                Write-Log "Install failed ($($_.Exception.Message)). Re-registering PSGallery and retrying." 'WARN'
+                Unregister-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+                Register-PSRepository -Default -ErrorAction Stop
+                Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction Stop
+                Install-Module -Name PSWindowsUpdate -Repository PSGallery -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
+            }
         }
         catch {
-            # A broken registration survives the check above. Re-register once and retry.
-            Write-Log "Install failed ($($_.Exception.Message)). Re-registering PSGallery and retrying." 'WARN'
-            Unregister-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-            Register-PSRepository -Default -ErrorAction Stop
-            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction Stop
-            Install-Module -Name PSWindowsUpdate -Repository PSGallery -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
+            # PowerShellGet 1.0.0.1 pings the gallery before every call and throws "PowerShell
+            # Gallery is currently unavailable" when that ping fails (proxy, web filter), even
+            # with the gallery up and -ErrorAction SilentlyContinue set. Skip PowerShellGet and
+            # fetch the package directly. A .nupkg is a zip; Expand-Archive on 5.1 wants .zip.
+            Write-Log "PowerShellGet failed ($($_.Exception.Message)). Downloading PSWindowsUpdate from the PowerShell Gallery directly." 'WARN'
+            $nupkg = Join-Path $env:TEMP 'PSWindowsUpdate.zip'
+            Invoke-WebRequest -Uri 'https://www.powershellgallery.com/api/v2/package/PSWindowsUpdate' -OutFile $nupkg -UseBasicParsing
+            Expand-Archive -Path $nupkg -DestinationPath (Join-Path $env:ProgramFiles 'WindowsPowerShell\Modules\PSWindowsUpdate') -Force
+            Remove-Item $nupkg -Force -ErrorAction SilentlyContinue
         }
     }
     Import-Module PSWindowsUpdate -ErrorAction Stop
@@ -201,7 +214,7 @@ else {
 
 Write-Log "[STATUS=$(switch ($exitCode) { 0 { 'SUCCESS' } 30 { 'PARTIAL' } default { 'ERROR' } })] [EXITCODE=$exitCode] [REBOOT=$rebootNeeded]"
 # Run as a file (.\Install-AllUpdates.ps1, RMM, powershell -File): hand the code to the caller.
-# Pasted or run from a gist with Invoke-Expression: exit would close the console, so
+# Pasted or run from the short URL with Invoke-Expression: exit would close the console, so
 # just record the code in $LASTEXITCODE and let the console live.
 if ($PSCommandPath) { exit $exitCode }
 $global:LASTEXITCODE = $exitCode
